@@ -52,13 +52,8 @@ bool readFlames(int f[]) {
 }
 
 int rightDirection(int d) 
-{ 
-int i = (d - 1) % 4;
-if(i<0)
 {
-  i=3;
-}
-return i;
+  return (d + 3) % 4;
 }
 int leftDirection(int d) 
 {
@@ -224,5 +219,3 @@ int trueAngle(int angle)
   }
 }
 
-
-i
