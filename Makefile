@@ -27,8 +27,8 @@ C_INCLUDES += -I$(CURDIR)/../../sdk/include -I${HOME}/Desktop/BreezySLAM/cpp
 
 CXXFLAGS += -std=c++14
 
-EXTRA_OBJ := lidar_support.o point.o interpolator.o
-LD_LIBS += -lstdc++ -lpthread -lbreezyslam
+EXTRA_OBJ := lidar_support.o point.o interpolator.o motor_hat.o serial_command.o rs232.o
+LD_LIBS += -lstdc++ -lpthread -lwiringPi
 
 always: cleanObjects clean all
 

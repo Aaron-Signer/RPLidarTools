@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <fstream>
+#include <sstream>
 #include "Position.hpp"
 #include "Velocities.hpp"
 #include "algorithms.hpp"
@@ -7,93 +8,221 @@
 #include "RPLaser.hpp"
 #include "lidar_support.hpp"
 #include "interpolator.hpp"
+#include "motor_hat.h"
+#include "serial_command.hpp"
+#include <wiringPi.h>
+#include <vector>
 
 using namespace rp::standalone::rplidar;
+motor_hat::motor_hat mh;
+RPlidarDriver *drv = setupLidar();
+RPLaser laser;
+int lidarData[360];
 
-// --------------------------------------------------------------------------------
-// SLAM stuff
-// --------------------------------------------------------------------------------
 
-const unsigned int MAP_SIZE_PIXELS = 800;
 
-int coords2index(double x,  double y)
-{    
-    return y * MAP_SIZE_PIXELS + x;
+// ------------------------------
+// Arduino communication
+// ------------------------------
+
+int arduinoSerialPort; // initialized below
+
+const int flameSensorCount = 5;
+int flameData[flameSensorCount];
+const char ARDUINO_COMMAND_FIND_FLAME = 'f';
+const char ARDUINO_COMMAND_READ_SOUND = 's';
+
+const int FLAME_FAR_LEFT = 0;
+const int FLAME_MID_LEFT = 1;
+const int FLAME_CENTER = 2;
+const int FLAME_MID_RIGHT = 3;
+const int FLAME_FAR_RIGHT = 4;
+const int ROTATION_DELAY = 500;
+
+bool readFlames(int f[]) {
+  sendArduinoCommand(arduinoSerialPort, ARDUINO_COMMAND_FIND_FLAME);
+  string response = readArduinoResponse(arduinoSerialPort);
+  //cout << "Arduino response: " << response << endl;
+  stringstream ss;
+  ss << response;
+  
+  if (! (ss >> f[0] >> f[1] >> f[2] >> f[3] >> f[4]) )
+    return false;
+  return true;
 }
 
-void vector_into_array(vector<point> v, int data[], size_t n) {
-  for(size_t i=0; i < n && i < v.size(); i++) {
-    data[i] = v[i].r;
+int rightDirection(int d) 
+{ 
+int i = (d - 1) % 4;
+if(i<0)
+{
+  i=3;
+}
+return i;
+}
+int leftDirection(int d) 
+{
+  return (d + 1) % 4; 
+}
+
+// moving robot
+void move(int i, int spd)
+{
+  if(i == -1)
+  {
+    mh.set_speed(2,0,1);
+    mh.set_speed(3,0,1);
+    mh.set_speed(1,0,1);
+    mh.set_speed(0,0,1);
+  }
+  if(i == 0)
+  {
+    mh.set_speed(3,spd,-1);
+    mh.set_speed(2,spd,1);
+    mh.set_speed(1,0,1);
+    mh.set_speed(0,0,1);
+  }
+  if(i == 2)
+  {
+    mh.set_speed(3,spd,1);
+    mh.set_speed(2,spd,-1);
+    mh.set_speed(1,0,1);
+    mh.set_speed(0,0,1);
+  }
+  if(i == 1)
+  {
+    mh.set_speed(2,0,1);
+    mh.set_speed(3,0,1);
+    mh.set_speed(1, spd,-1);
+    mh.set_speed(0, spd+5,1);
+  }
+  if(i == 3)
+  {
+    mh.set_speed(2,0,1);
+    mh.set_speed(3,0,1);
+    mh.set_speed(1, spd,1);
+    mh.set_speed(0, spd+10,-1);
   }
 }
 
-void map_2_image(unsigned char* map) {
-  ofstream image("image.pgm");
-  image << "P2" << endl << MAP_SIZE_PIXELS << " " << MAP_SIZE_PIXELS << " 255" << endl;    
-  for (size_t y=0; y<MAP_SIZE_PIXELS; y++) {
-    for (size_t x=MAP_SIZE_PIXELS; x>0; x--) {
-	if(map[coords2index(y,x-1)] < 10)
-      		image << 0 << " ";
-	else
-		image << 255 << " ";
+//1 for right, -1 for left
+void rotate(int i, int spd)
+{
+  mh.set_speed(2,spd,-i);
+  mh.set_speed(3,spd,-i);
+  mh.set_speed(1,spd,-i);
+  mh.set_speed(0,spd,-i);
+}
+
+//update lidar info
+void updateLid(int lid [])
+{
+  vector<point> points = readLidar(drv, true);
+  interpolate(points, lid, 360, 1); 
+}
+
+//returns an angle given a direction
+int dirToAng(int d)
+{
+  switch (d)
+  {
+  case 0:
+    return 0;
+  case 1:
+    return 270;
+  case 2:
+    return 180;
+  case 3:
+    return 90;
+  }
+  return -1;
+}
+
+//return the dist given a direction and lidarData
+int rangeAtDirection(int d, int lid [])
+{
+  return lid[dirToAng(d)];
+}
+
+// -----------------------------------------------
+// Fan code
+// -----------------------------------------------
+
+void setupFan() {
+  pinMode(12, OUTPUT);
+  pinMode(5, OUTPUT);
+  digitalWrite(12, LOW);
+  digitalWrite(5, LOW);
+}
+
+void fanOn()
+{
+  digitalWrite(12, HIGH);
+  //digitalWrite(5, HIGH);
+}
+
+void fanOff()
+{
+  digitalWrite(12, LOW);
+}
+
+void putOutFlame(int value)
+{
+  fanOn();
+  while(flameData[FLAME_CENTER]>value-200)
+  {
+    cout << value-200 << endl;
+    cout << flameData[FLAME_CENTER] << endl;
+    readFlames(flameData);
+    rotate(-1,20);
+    delay(1500);
+    rotate(1,20);
+    delay(1500);
+  }
+  fanOff();
+  move(-1,1);
+}
+
+void centerFlame() 
+{
+  while(true)
+  {
+    readFlames(flameData);
+    if(flameData[FLAME_CENTER]>flameData[FLAME_FAR_LEFT]&&flameData[FLAME_CENTER]>flameData[FLAME_FAR_RIGHT]&&flameData[FLAME_CENTER]>flameData[FLAME_MID_RIGHT]&&flameData[FLAME_CENTER]>flameData[FLAME_MID_LEFT])
+    {
+      delay(1000);
+      move(-1,1);
+      putOutFlame(flameData[FLAME_CENTER]);
+      break;
     }
-    image << endl;
-  }
-  image.close();
-}
-
-void print_map(unsigned char* map) {
-  for(size_t row=0; row < MAP_SIZE_PIXELS; row++) {
-    for(size_t col=0; col < MAP_SIZE_PIXELS; col++) {
-      cout << (int)map[coords2index(col,row)] << " ";
-      // if (map[coord2index(col,row)] != 0)
-      // 	cout << "X";
-      // else
-      // 	cout << " ";
+    if(flameData[FLAME_FAR_RIGHT]>flameData[FLAME_FAR_LEFT])
+    {
+      rotate(1,20);
+      delay(1000);
     }
-    cout << endl;
+    else
+    {
+      rotate(-1,20);
+      delay(1000);
+    }
   }
 }
 
-int main() {
-
-  unsigned char * map = new unsigned char[MAP_SIZE_PIXELS * MAP_SIZE_PIXELS];
-  RPLaser laser;
-  RMHC_SLAM slam(laser, MAP_SIZE_PIXELS, 4, time(NULL));
-  
-  RPlidarDriver *drv = setupLidar();
-
-  // throw away first 10
-  for(int i=0; i < 10; i++) {
-    readLidar(drv, true);
+int trueAngle(int angle)
+{
+  if(angle>=360)
+  {
+    return (angle-360);
   }
-
-
-  // OK, I know part of the problem now.  the function always360 is
-  // broken.  Need to interpolate on the data set to get 360 data
-  // points.
-  
-  for(int i=0; i < 100; i++) {
-    int lidarData[360];
-    vector<point> points = readLidar(drv, true);
-    interpolate(points, lidarData, 360, 1);
-
-    // for(point p: points) cout << p.r << " ";
-    // cout << endl << "----------------" << endl;
-     for(size_t i=0; i < 360; i++) 
-	cout << i << " " << lidarData[i] << endl;
-
-     //cout << endl << "------------------------------" << endl;
-
-    
-    slam.update(lidarData);
-
-    Position p = slam.getpos();
-    //cout << p.x_mm << " " << p.y_mm << endl;
+  else if (angle < 0)
+  {
+    return(angle+360);
   }
-  
-  slam.getmap(map);
-  map_2_image(map);
-  drv->stopMotor();
-  
+  else
+  {
+    return angle;
+  }
 }
+
+
+i
