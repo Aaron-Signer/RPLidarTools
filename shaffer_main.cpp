@@ -40,8 +40,8 @@ const int FLAME_FAR_RIGHT = 4;
 const int ROTATION_DELAY = 500;
 const int CHANGE_DIR_THRESH = 215;
 const int TRANS_SPEED = 150;
-const int RIGHT_LEFT_ADJ = 200
-const int RIGHT_LEFT_ADJ_WINDOW = RIGHT_LEFT_ADJ + 30;
+const int RIGHT_LEFT_ADJ = 200;
+const int RIGHT_LEFT_ADJ_WINDOW = RIGHT_LEFT_ADJ+30;
 const int FLAME_THRESH = 600;
 
 bool readFlames(int f[]) {
@@ -238,7 +238,7 @@ bool foundFlame()
   }
   return found;
 }
-
+/*
 void adjust(int direction)
 {
   int minAngle;
@@ -248,7 +248,7 @@ void adjust(int direction)
   }
   move(-1,0);
 }
-
+*/
 int rotDir(int currAngle, int desAngle)
 {
   int i = currAngle;
@@ -270,7 +270,7 @@ int rotDir(int currAngle, int desAngle)
 
 int go(int direction)
 {
-  while(rangeAtDirection(direction)!=0 && rangeAtDirection(direction)>CHANGE_DIR_THRESH)
+  while(rangeAtDirection(direction,lidarData)!=0 && rangeAtDirection(direction,lidarData)>CHANGE_DIR_THRESH)
   {
     updateLid(lidarData);
     move(direction, TRANS_SPEED);
@@ -279,29 +279,39 @@ int go(int direction)
       centerFlame();
       return 2;
     }
-    if(rangeAtDirection(rightDirection(direction))!=0 && rangeAtDirection(rightDirection(direction))<RIGHT_LEFT_ADJ)
+    if(rangeAtDirection(rightDirection(direction),lidarData)!=0 && rangeAtDirection(rightDirection(direction),lidarData)<RIGHT_LEFT_ADJ)
     {
-      while(rangeAtDirection(rightDirection(direction))!=0 && rangeAtDirection(rightDirection(direction))<RIGHT_LEFT_ADJ_WINDOW)
+      while(rangeAtDirection(rightDirection(direction),lidarData)!=0 && rangeAtDirection(rightDirection(direction),lidarData)<RIGHT_LEFT_ADJ_WINDOW)
       {
         move(leftDirection(direction),TRANS_SPEED);
       }
     }
-    else if(rangeAtDirection(leftDirection(direction))!=0 && rangeAtDirection(leftDirection(direction))<RIGHT_LEFT_ADJ)
+    else if(rangeAtDirection(leftDirection(direction),lidarData)!=0 && rangeAtDirection(leftDirection(direction),lidarData)<RIGHT_LEFT_ADJ)
     {
-      while(rangeAtDirection(leftDirection(direction))!=0 && rangeAtDirection(leftDirection(direction))<RIGHT_LEFT_ADJ_WINDOW)
+      while(rangeAtDirection(leftDirection(direction),lidarData)!=0 && rangeAtDirection(leftDirection(direction),lidarData)<RIGHT_LEFT_ADJ_WINDOW)
       {
         move(rightDirection(direction),TRANS_SPEED);
       }
     }
   }
     move(-1,0);
-    adjust(direction);
+  //  adjust(direction);
     direction++;
     return direction;
 }
 
 int main()
 {
+
+  arduinoSerialPort=setupArduinoSerial();
+  
+  // throw away first 10
+  for(int i=0; i < 10; i++) 
+  {
+    readLidar(drv, true);
+  }
+  
+  
   int i = 0;
   while(true)
   {

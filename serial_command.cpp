@@ -36,7 +36,7 @@ string readArduinoResponse(int serialPort) {
 
 int setupArduinoSerial()
 {
-  char name[] = "ttyACM1"; // may need to change
+  char name[] = "ttyACM0"; // may need to change
   
   int serialP = RS232_GetPortnr(name);
   char mode[]={'8','N','1',0}; // 8 data bits, no parity, 1 stop bit
