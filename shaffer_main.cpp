@@ -31,6 +31,8 @@ const int flameSensorCount = 5;
 int flameData[flameSensorCount];
 const char ARDUINO_COMMAND_FIND_FLAME = 'f';
 const char ARDUINO_COMMAND_READ_SOUND = 's';
+const char ARDUINO_COMMAND_FAN_ON = '1';
+const char ARDUINO_COMMAND_FAN_OFF = '0';
 
 const int FLAME_FAR_LEFT = 0;
 const int FLAME_MID_LEFT = 1;
@@ -42,10 +44,11 @@ const int CHANGE_DIR_THRESH = 250;
 const int TRANS_SPEED = 150;
 const int RIGHT_LEFT_ADJ = 200;
 const int RIGHT_LEFT_ADJ_WINDOW = RIGHT_LEFT_ADJ+30;
-const int FLAME_THRESH = 1000;
+const int FLAME_THRESH = 900;
 
 bool readFlames(int f[]) {
   sendArduinoCommand(arduinoSerialPort, ARDUINO_COMMAND_FIND_FLAME);
+  cout << "command f sent" << endl;
   string response = readArduinoResponse(arduinoSerialPort);
   //cout << "Arduino response: " << response << endl;
   stringstream ss;
@@ -165,13 +168,12 @@ void setupFan() {
 
 void fanOn()
 {
-  digitalWrite(12, HIGH);
-  digitalWrite(5, HIGH);
+  sendArduinoCommand(arduinoSerialPort, ARDUINO_COMMAND_FAN_ON);
 }
 
 void fanOff()
 {
-  digitalWrite(12, LOW);
+  sendArduinoCommand(arduinoSerialPort, ARDUINO_COMMAND_FAN_OFF);
 }
 
 void putOutFlame(int value)
@@ -179,6 +181,12 @@ void putOutFlame(int value)
   fanOn();
   while(flameData[FLAME_CENTER]>value-200)
   {
+    while(flameData[FLAME_CENTER]+flameData[FLAME_MID_RIGHT]+flameData[FLAME_MID_LEFT]<2000)
+    {
+      cout << "getting closer ----------------------------" << endl;
+      move(0,150);
+      readFlames(flameData);
+    }
     cout << value-200 << endl;
     cout << flameData[FLAME_CENTER] << endl;
     readFlames(flameData);
@@ -261,7 +269,7 @@ void adjust(int direction)
 int rotDir(int currAngle, int desAngle)
 {
   int i = currAngle;
-  int itr;
+  int itr = 0;
   while(i != desAngle)
   {
     i++;
@@ -309,6 +317,12 @@ int go(int direction)
         move(rightDirection(direction),TRANS_SPEED);
       }
     }
+    if(foundFlame())
+    {
+      cout<< "found flmae" << endl;
+      centerFlame();
+      return 2;
+    }
     cout << "end loop" << endl;
   }
   cout<< "out"<< endl;
@@ -326,7 +340,7 @@ int main()
 {
 
   arduinoSerialPort=setupArduinoSerial();
-  
+    
   while(!readSound())
   {
     cout << "not yet" << endl;

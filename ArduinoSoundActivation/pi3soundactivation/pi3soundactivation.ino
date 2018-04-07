@@ -8,7 +8,7 @@ const char FIND_FLAME = 'f';
 
 void setup() {
   // Set up serial port and leds
-  Serial.begin(57600);
+  Serial.begin(9600);
   pinMode(2,OUTPUT);
   pinMode(3,OUTPUT);
 
@@ -22,11 +22,33 @@ void setup() {
     delay(1000);
     blueOff();  
   }
+  setupFan();
+}
+
+void setupFan()
+{
+   pinMode(7, OUTPUT);
+   pinMode(6, OUTPUT);
+}
+
+void fanOn()
+{
+  digitalWrite(7,HIGH);
+  digitalWrite(6, HIGH);
+}
+
+void fanOff()
+{
+  digitalWrite(7,LOW);
+  digitalWrite(6, LOW);
 }
 
 void loop() 
 {
-
+//    redOn();
+//    delay(500);
+//    redOff();
+//    delay(500);
   if(Serial.available()>0)
   {
     char incomingByte = char(Serial.read());
@@ -35,8 +57,6 @@ void loop()
       sound();
       Serial.println("Y");
       blueOn();
-      delay(5000);
-      blueOff();
     }
     if(incomingByte == FIND_FLAME)
     {
@@ -76,6 +96,7 @@ void redOn()
 }
 
 void sound() {
+  delay(10000);
 //  Serial.println("here");
   read_sound();
   int low_frequency_counter = 0;
