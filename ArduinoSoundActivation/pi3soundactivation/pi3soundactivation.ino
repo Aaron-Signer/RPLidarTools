@@ -26,14 +26,7 @@ void setup() {
 
 void loop() 
 {
-//  blueOn();
-//  delay(1000);
-//  blueOff();
-//  sound();
-//  Serial.println("Y");
-//  blueOn();
-  Serial.println(analogRead(0));
-  /*
+
   if(Serial.available()>0)
   {
     char incomingByte = char(Serial.read());
@@ -42,6 +35,8 @@ void loop()
       sound();
       Serial.println("Y");
       blueOn();
+      delay(5000);
+      blueOff();
     }
     if(incomingByte == FIND_FLAME)
     {
@@ -58,7 +53,6 @@ void loop()
     Serial.println();
     }
   }
-  */
 }
 
 void blueOff()

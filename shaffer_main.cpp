@@ -38,11 +38,11 @@ const int FLAME_CENTER = 2;
 const int FLAME_MID_RIGHT = 3;
 const int FLAME_FAR_RIGHT = 4;
 const int ROTATION_DELAY = 500;
-const int CHANGE_DIR_THRESH = 215;
+const int CHANGE_DIR_THRESH = 250;
 const int TRANS_SPEED = 150;
 const int RIGHT_LEFT_ADJ = 200;
 const int RIGHT_LEFT_ADJ_WINDOW = RIGHT_LEFT_ADJ+30;
-const int FLAME_THRESH = 600;
+const int FLAME_THRESH = 1000;
 
 bool readFlames(int f[]) {
   sendArduinoCommand(arduinoSerialPort, ARDUINO_COMMAND_FIND_FLAME);
@@ -56,12 +56,12 @@ bool readFlames(int f[]) {
   return true;
 }
 
-bool readSound() {
+bool readSound() 
+{
   sendArduinoCommand(arduinoSerialPort, ARDUINO_COMMAND_READ_SOUND);
   string response = readArduinoResponse(arduinoSerialPort);
   cout << "Arduino response: " << response << endl;
-
-  return (response == "Y");
+  return (response!="");
  }
 
 int rightDirection(int d) 
@@ -241,6 +241,7 @@ bool foundFlame()
   {
     if(flameData[i]>FLAME_THRESH)
     {
+      cout << flameData[i] << endl;
       found = true;
     }
   }
@@ -277,35 +278,48 @@ int rotDir(int currAngle, int desAngle)
 }
 
 int go(int direction)
-{
+{ 
+  updateLid(lidarData);
   while(rangeAtDirection(direction,lidarData)!=0 && rangeAtDirection(direction,lidarData)>CHANGE_DIR_THRESH)
   {
     updateLid(lidarData);
     move(direction, TRANS_SPEED);
+    cout << rangeAtDirection(direction, lidarData) << endl;
     if(foundFlame())
     {
+      cout<< "found flmae" << endl;
       centerFlame();
       return 2;
     }
     if(rangeAtDirection(rightDirection(direction),lidarData)!=0 && rangeAtDirection(rightDirection(direction),lidarData)<RIGHT_LEFT_ADJ)
     {
+    cout<< "close right" << endl;
       while(rangeAtDirection(rightDirection(direction),lidarData)!=0 && rangeAtDirection(rightDirection(direction),lidarData)<RIGHT_LEFT_ADJ_WINDOW)
       {
+        updateLid(lidarData);
         move(leftDirection(direction),TRANS_SPEED);
       }
     }
     else if(rangeAtDirection(leftDirection(direction),lidarData)!=0 && rangeAtDirection(leftDirection(direction),lidarData)<RIGHT_LEFT_ADJ)
     {
+    cout<< "close left" << endl;
       while(rangeAtDirection(leftDirection(direction),lidarData)!=0 && rangeAtDirection(leftDirection(direction),lidarData)<RIGHT_LEFT_ADJ_WINDOW)
       {
+        updateLid(lidarData);
         move(rightDirection(direction),TRANS_SPEED);
       }
     }
+    cout << "end loop" << endl;
   }
-    move(-1,0);
+  cout<< "out"<< endl;
   //  adjust(direction);
     direction++;
     return direction;
+}
+
+void setupFan2()
+{
+	
 }
 
 int main()
@@ -313,25 +327,21 @@ int main()
 
   arduinoSerialPort=setupArduinoSerial();
   
+  while(!readSound())
+  {
+    cout << "not yet" << endl;
+  }
+  
   // throw away first 10
   for(int i=0; i < 10; i++) 
   {
     readLidar(drv, true);
   }
   
-  cout << "hello" << endl;
-  while(!readSound())
-  {
-    cout << "nothin yet" << endl;
-  }
-  
-  cout << "heard it" << endl;
-  
-  
   int i = 0;
   while(true)
   {
-    int i = go(i);
+    i = go(i);
     i = i%4;
   }
 }
