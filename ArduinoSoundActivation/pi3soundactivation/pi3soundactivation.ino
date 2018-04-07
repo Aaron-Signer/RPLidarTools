@@ -25,25 +25,23 @@ void setup() {
 }
 
 void loop() 
-{/*
-    Serial.print(analogRead(1));
-    Serial.print(" ");
-    Serial.print(analogRead(2));
-    Serial.print(" ");
-    Serial.print(analogRead(3));
-    Serial.print(" ");
-    Serial.print(analogRead(4));
-    Serial.print(" ");
-    Serial.print(analogRead(5));
-    Serial.print(" ");
-    Serial.println();*/
+{
+//  blueOn();
+//  delay(1000);
+//  blueOff();
+//  sound();
+//  Serial.println("Y");
+//  blueOn();
+  Serial.println(analogRead(0));
+  /*
   if(Serial.available()>0)
   {
     char incomingByte = char(Serial.read());
     if(incomingByte == READ_SOUND) 
     {
       sound();
-      Serial.println("YES");
+      Serial.println("Y");
+      blueOn();
     }
     if(incomingByte == FIND_FLAME)
     {
@@ -60,6 +58,7 @@ void loop()
     Serial.println();
     }
   }
+  */
 }
 
 void blueOff()
@@ -104,7 +103,7 @@ void read_sound() {
   {
 
     fft_input[i] = analogRead(A0)-512;
-//    Serial.println(fft_input[i]);
+    //Serial.println(fft_input[i]);
     fft_input[i+1] = 0;
   }
   // window data, then reorder, then run, then take output

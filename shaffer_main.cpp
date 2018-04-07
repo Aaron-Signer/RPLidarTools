@@ -56,6 +56,14 @@ bool readFlames(int f[]) {
   return true;
 }
 
+bool readSound() {
+  sendArduinoCommand(arduinoSerialPort, ARDUINO_COMMAND_READ_SOUND);
+  string response = readArduinoResponse(arduinoSerialPort);
+  cout << "Arduino response: " << response << endl;
+
+  return (response == "Y");
+ }
+
 int rightDirection(int d) 
 {
   return (d + 3) % 4;
@@ -310,6 +318,14 @@ int main()
   {
     readLidar(drv, true);
   }
+  
+  cout << "hello" << endl;
+  while(!readSound())
+  {
+    cout << "nothin yet" << endl;
+  }
+  
+  cout << "heard it" << endl;
   
   
   int i = 0;
