@@ -38,6 +38,11 @@ const int FLAME_CENTER = 2;
 const int FLAME_MID_RIGHT = 3;
 const int FLAME_FAR_RIGHT = 4;
 const int ROTATION_DELAY = 500;
+const int CHANGE_DIR_THRESH = 215;
+const int TRANS_SPEED = 150;
+const int RIGHT_LEFT_ADJ = 200
+const int RIGHT_LEFT_ADJ_WINDOW = RIGHT_LEFT_ADJ + 30;
+const int FLAME_THRESH = 600;
 
 bool readFlames(int f[]) {
   sendArduinoCommand(arduinoSerialPort, ARDUINO_COMMAND_FIND_FLAME);
@@ -153,7 +158,7 @@ void setupFan() {
 void fanOn()
 {
   digitalWrite(12, HIGH);
-  //digitalWrite(5, HIGH);
+  digitalWrite(5, HIGH);
 }
 
 void fanOff()
@@ -183,7 +188,8 @@ void centerFlame()
   while(true)
   {
     readFlames(flameData);
-    if(flameData[FLAME_CENTER]>flameData[FLAME_FAR_LEFT]&&flameData[FLAME_CENTER]>flameData[FLAME_FAR_RIGHT]&&flameData[FLAME_CENTER]>flameData[FLAME_MID_RIGHT]&&flameData[FLAME_CENTER]>flameData[FLAME_MID_LEFT])
+    if(flameData[FLAME_CENTER]>flameData[FLAME_FAR_LEFT]&&flameData[FLAME_CENTER]>flameData[FLAME_FAR_RIGHT]&&
+      flameData[FLAME_CENTER]>flameData[FLAME_MID_RIGHT]&&flameData[FLAME_CENTER]>flameData[FLAME_MID_LEFT])
     {
       delay(1000);
       move(-1,1);
@@ -219,3 +225,87 @@ int trueAngle(int angle)
   }
 }
 
+bool foundFlame()
+{
+  readFlames(flameData);
+  bool found = false;
+  for(int i = 0; i<5; i++)
+  {
+    if(flameData[i]>FLAME_THRESH)
+    {
+      found = true;
+    }
+  }
+  return found;
+}
+
+void adjust(int direction)
+{
+  int minAngle;
+  while(our angle isnt min angle)
+  {
+    rotate(rotDir(dirToAng(direction), minAngle),ROTAION_SPEED);
+  }
+  move(-1,0);
+}
+
+int rotDir(int currAngle, int desAngle)
+{
+  int i = currAngle;
+  int itr;
+  while(i != desAngle)
+  {
+    i++;
+    i = trueAngle(i);
+  }
+  if(itr>180)
+  {
+    return -1;
+  }
+  else
+  {
+    return 1;
+  }
+}
+
+int go(int direction)
+{
+  while(rangeAtDirection(direction)!=0 && rangeAtDirection(direction)>CHANGE_DIR_THRESH)
+  {
+    updateLid(lidarData);
+    move(direction, TRANS_SPEED);
+    if(foundFlame())
+    {
+      centerFlame();
+      return 2;
+    }
+    if(rangeAtDirection(rightDirection(direction))!=0 && rangeAtDirection(rightDirection(direction))<RIGHT_LEFT_ADJ)
+    {
+      while(rangeAtDirection(rightDirection(direction))!=0 && rangeAtDirection(rightDirection(direction))<RIGHT_LEFT_ADJ_WINDOW)
+      {
+        move(leftDirection(direction),TRANS_SPEED);
+      }
+    }
+    else if(rangeAtDirection(leftDirection(direction))!=0 && rangeAtDirection(leftDirection(direction))<RIGHT_LEFT_ADJ)
+    {
+      while(rangeAtDirection(leftDirection(direction))!=0 && rangeAtDirection(leftDirection(direction))<RIGHT_LEFT_ADJ_WINDOW)
+      {
+        move(rightDirection(direction),TRANS_SPEED);
+      }
+    }
+  }
+    move(-1,0);
+    adjust(direction);
+    direction++;
+    return direction;
+}
+
+int main()
+{
+  int i = 0;
+  while(true)
+  {
+    int i = go(i);
+    i = i%4;
+  }
+}
