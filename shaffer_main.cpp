@@ -64,7 +64,7 @@ bool readSound()
   sendArduinoCommand(arduinoSerialPort, ARDUINO_COMMAND_READ_SOUND);
   string response = readArduinoResponse(arduinoSerialPort);
   cout << "Arduino response: " << response << endl;
-  return (response!="");
+  return(response.substr(0,1)=="Y");
  }
 
 int rightDirection(int d) 
@@ -181,7 +181,7 @@ void putOutFlame(int value)
   fanOn();
   while(flameData[FLAME_CENTER]>value-200)
   {
-    while(flameData[FLAME_CENTER]+flameData[FLAME_MID_RIGHT]+flameData[FLAME_MID_LEFT]<2000)
+    while(flameData[FLAME_CENTER]+flameData[FLAME_MID_RIGHT]+flameData[FLAME_MID_LEFT]<2500&&flameData[FLAME_CENTER]>value-200)
     {
       cout << "getting closer ----------------------------" << endl;
       move(0,150);
@@ -336,15 +336,25 @@ void setupFan2()
 	
 }
 
-int main()
+int main(int argc, char* argv[])
 {
 
-  arduinoSerialPort=setupArduinoSerial();
+  if (argc != 2) {
+     cout << "Must specifyt arduino tty" << endl;
+     exit(1);
+  }
+
+  arduinoSerialPort=setupArduinoSerial(argv[1]);
+  
+  fanOff();
     
   while(!readSound())
   {
     cout << "not yet" << endl;
   }
+  
+  string fr = "hello";
+  cout<<fr.substr(0,1)<< endl;
   
   // throw away first 10
   for(int i=0; i < 10; i++) 

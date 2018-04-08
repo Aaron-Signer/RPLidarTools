@@ -8,9 +8,11 @@ const char FIND_FLAME = 'f';
 
 void setup() {
   // Set up serial port and leds
-  Serial.begin(9600);
+  Serial.begin(57600);
   pinMode(2,OUTPUT);
   pinMode(3,OUTPUT);
+  
+  redOn();
 
   // testing led
   while(false)
@@ -54,9 +56,23 @@ void loop()
     char incomingByte = char(Serial.read());
     if(incomingByte == READ_SOUND) 
     {
-      sound();
-      Serial.println("Y");
-      blueOn();
+      redOff();
+      bool hear = sound();
+      
+      if(hear)
+      {
+        Serial.println("Y");
+        Serial.flush();
+        blueOn();
+      }
+      else
+      {
+        Serial.println("N");
+        Serial.flush();
+        
+      }
+
+
     }
     if(incomingByte == FIND_FLAME)
     {
@@ -71,6 +87,7 @@ void loop()
     Serial.print(analogRead(5));
     Serial.print(" ");
     Serial.println();
+    Serial.flush();
     }
   }
 }
@@ -94,23 +111,18 @@ void redOn()
 {
   digitalWrite(3,HIGH);
 }
-
-void sound() {
-  delay(10000);
-//  Serial.println("here");
+bool sound() {
   read_sound();
-  int low_frequency_counter = 0;
-  while(low_frequency_counter < 10) {
-//    Serial.print("ggodfgfgdf");
-    //Serial.println();
+  int low_frequency_counter = 0; 
+  for(int i = 0; i<10; i++)
+  {
     if (low_frequency_sum() > 140)
       low_frequency_counter++;
-    
-    else
-      low_frequency_counter = 0;
+      
     read_sound();
   }
-  digitalWrite(2,HIGH);
+  
+  return (low_frequency_counter==10);
 }
 
 void read_sound() {

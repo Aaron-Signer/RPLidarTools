@@ -2,7 +2,7 @@
 #include <string>
 
 // call before anything else, returns serialPort
-int setupArduinoSerial(void);
+int setupArduinoSerial(char*);
 
 // serialPort, commandLetter
 void sendArduinoCommand(int, char);
